@@ -1,5 +1,6 @@
-userNameButton();
+const url = "https://api.github.com/users/";
 
+userNameButton();
 function userNameButton() {
 
 	var searchButton = document.getElementById("searchButton");
@@ -23,31 +24,43 @@ function searchUserName() {
 }
 
 function searchGithub(apiGitSubPath) {
+	let exactUserUrl = url + apiGitSubPath;
 
-	var url = "https://api.github.com/users/";
-	var exactUserUrl = url + apiGitSubPath;
-
-	var http = new XMLHttpRequest();
-	http.open("GET", exactUserUrl, true);
-
-	http.onload = function () {
-		if (http.status === 200) {
-			var exactUser = JSON.parse(http.responseText);
-			if (apiGitSubPath.search("/repos") === -1) {
-				createName(exactUser);
-			} else {
-				createRepository(exactUser);
-			}
-		} else if (http.status === 404) {
-			addUserNotExistBox();
-			removeHistory();
-		} else {
-			alert("Unexpected response: " + http.status);
-			removeHistory();
+	fetch(exactUserUrl)
+	.then((response) => {
+		if(response.ok) {
+			return response.json();
 		}
-	};
-	http.send();
+	})
+	.then((data) => {
+		if(!(apiGitSubPath.endsWith("/repos"))) {
+			createName(data);
+		}
+		else {
+			createRepository(data);
+		}
+	})
+	.catch((error) => {
+		removeHistory();
+		addUserNotExistBox();
+		console.log(error.message);
+	});
 }
+
+function searchRepo(repo) {
+	let exactUserUrl = url + repo;
+
+	fetch(exactUserUrl)
+	.then((response) => {
+		if(response.ok) {
+			return response.json();
+		}
+	})
+	.then((data) => {
+			createRepository(data);
+	})
+}
+
 
 function addUserNotExistBox() {
 	var errorBox = document.getElementsByClassName("errorBox")[0];
@@ -89,32 +102,26 @@ function createName(exactUser) {
 	var userNameElement = createElement("p", "userNameText");
 	var loginPageElement = document.createElement("a");
 	loginPageElement.href = exactUser.html_url;
-	var userNameText = document.createTextNode("@" + exactUser.login);
-	loginPageElement.append(userNameText);
-	userNameElement.appendChild(loginPageElement);
+	var userNameText = createTextElement("@" + exactUser.login, loginPageElement, userNameElement);
 	InfoBoxElement.appendChild(userNameElement);
 
 	if(exactUser.name != null) {
 		var fullNameElement = createElement("p", "fullNameText");
-		var fullNameText = document.createTextNode(exactUser.name);
-		fullNameElement.appendChild(fullNameText);
-		InfoBoxElement.appendChild(fullNameElement);
+		var fullNameText = createTextElement(exactUser.name, fullNameElement, InfoBoxElement);
 	}
 
 	if(exactUser.bio != null) {
 		var bioElement = createElement("p", "bioText");
-		var bioText = document.createTextNode(exactUser.bio);
-		bioElement.appendChild(bioText);
-		InfoBoxElement.appendChild(bioElement);
+		var bioText = createTextElement(exactUser.bio, bioElement, InfoBoxElement);
 	}
 
 	responseDiv.appendChild(InfoBoxElement);
 
 	var repositories = exactUser.login + "/repos";
-	searchGithub(repositories);
+	searchRepo(repositories);
 }
 
-function createRepository(exactUser) {
+function createRepository(repo) {
 
 	var repositoryElement = document.getElementById("repositories");
 	repositoryElement.innerHTML = "";
@@ -137,18 +144,16 @@ function createRepository(exactUser) {
 	titleElement.appendChild(repositoriesBox);
 
 	//set scroll scrollbar and statement
-	if (exactUser.length == 0) {
+	if (repo.length == 0) {
 		repositoriesBox.appendChild(statement);
 	}
+	repo.forEach(function(element) {
 
-	for (var i = 0; i < exactUser.length; i++) {
-
-		//set the name of the repositories
 		var divElement = createElement("div", "reposDivParent");
 		var repoTitleElement = createElement("div", "reposDiv");
-		var repoTitle = document.createTextNode(exactUser[i].name);
+		var repoTitle = document.createTextNode(element.name);
 		var repoPage = document.createElement("a");
-		repoPage.href = exactUser[i].html_url;
+		repoPage.href = element.html_url;
 		repoPage.appendChild(repoTitle);
 		repoTitleElement.appendChild(repoPage);
 		divElement.appendChild(repoTitleElement);
@@ -160,20 +165,15 @@ function createRepository(exactUser) {
 		divElement.appendChild(starIcon);
 
 		var starNumberElement = document.createElement('p');
-		var starNumber = document.createTextNode(exactUser[i].stargazers_count);
-		starNumberElement.appendChild(starNumber);
-		divElement.appendChild(starNumberElement);
-
+		var starNumber = createTextElement(element.stargazers_count, starNumberElement, divElement);
 		//set fork icon
 		var forkIcon = createElement("img", "forkStyle");
 		forkIcon.src = "/images/fork_icon.png";
 		divElement.appendChild(forkIcon);
 
 		var forkNumberElement = document.createElement('p');
-		var forkNumber = document.createTextNode(exactUser[i].forks_count);
-		forkNumberElement.appendChild(forkNumber);
-		divElement.appendChild(forkNumberElement);
-	}
+		var forkNumber = createTextElement(element.forks_count, forkNumberElement, divElement);
+	});
 }
 
 function createElement(tag, classes) {

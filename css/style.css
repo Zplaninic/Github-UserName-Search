@@ -1,5 +1,5 @@
-html, body {
-  margin: 0;
+html, body{
+  margin: 0px;;
   height: 100%;
 }
 
@@ -120,6 +120,7 @@ main {
 .reposDivParent p {
   margin: 5px;
 }
+
 .reposDiv {
   width: 80%;
 }
